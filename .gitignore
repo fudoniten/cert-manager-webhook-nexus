@@ -1,0 +1,4 @@
+_test/
+testdata/
+/cert-manager-webhook-nexus
+_out/
