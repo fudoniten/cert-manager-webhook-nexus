@@ -1,11 +1,11 @@
-groupName: acme.nexus.fudo.org
+groupName: nexus.fudo.org
 
 certManager:
   namespace: cert-manager
   serviceAccountName: cert-manager
 
 image:
-  repository: igrnt/cert-manager-webhook-nexus
+  repository: fudoniten/cert-manager-webhook-nexus
   tag: latest
   pullPolicy: IfNotPresent
 
