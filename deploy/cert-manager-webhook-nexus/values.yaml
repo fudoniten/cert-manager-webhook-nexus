@@ -5,7 +5,7 @@ certManager:
   serviceAccountName: cert-manager
 
 image:
-  repository: fudoniten/cert-manager-webhook-nexus
+  repository: hub.docker.com/v2/fudoniten/cert-manager-webhook-nexus
   tag: latest
   pullPolicy: IfNotPresent
 
