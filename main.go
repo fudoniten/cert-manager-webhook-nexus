@@ -116,6 +116,7 @@ func (c *nexusDnsProviderSolver) nexusApiClient(ch *v1alpha1.ChallengeRequest) (
 	}
 	key, err := base64.StdEncoding.DecodeString(keyStr)
 	if err != nil {
+		err = errors.New(fmt.Sprintf("failure to decode base64 secret: %v", err))
 		return
 	}
 	client, err = nexus.New(server, domainName, cfg.Service, key)
@@ -161,7 +162,7 @@ func (c *nexusDnsProviderSolver) secret(ref corev1.SecretKeySelector, namespace 
 		return
 	}
 
-	keyValue, err := c.client.CoreV1().Secrets(namespace).Get(context.TODO(), ref.Name, metav1.GetOptions{})
+	keyValue, err := c.client.CoreV1().Secrets(namespace).Get(context.Background(), ref.Name, metav1.GetOptions{})
 	if err != nil {
 		return
 	}
