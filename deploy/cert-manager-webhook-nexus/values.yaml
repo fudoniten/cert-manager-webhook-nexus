@@ -7,7 +7,7 @@ certManager:
 image:
   repository: hub.docker.com/v2/fudoniten/cert-manager-webhook-nexus
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 nameOverride: ""
 fullnameOverride: ""
