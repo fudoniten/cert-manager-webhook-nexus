@@ -6,7 +6,7 @@ certManager:
 
 image:
   repository: fudoniten/cert-manager-webhook-nexus
-  tag: v0.1.1
+  tag: v0.1.2
   pullPolicy: Always
 
 nameOverride: ""
