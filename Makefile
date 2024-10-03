@@ -12,7 +12,7 @@ IMAGE_TAG := "latest"
 
 OUT := $(shell pwd)/_out
 
-KUBEBUILDER_VERSION=2.3.2
+KUBEBUILDER_VERSION=4.2.0
 
 $(shell mkdir -p "$(OUT)")
 

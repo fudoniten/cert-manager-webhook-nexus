@@ -1,9 +1,9 @@
 module github.com/fudoniten/cert-manager-webhook-nexus
 
-go 1.21
+go 1.21.13
 
 require (
-	github.com/fudoniten/nexus-go v0.0.0-20240923174749-798e07548919
+	github.com/fudoniten/nexus-go v0.0.0-20241003193051-45ba171b0911
 	github.com/google/uuid v1.6.0
 	github.com/jetstack/cert-manager v1.2.0
 	k8s.io/api v0.19.0
