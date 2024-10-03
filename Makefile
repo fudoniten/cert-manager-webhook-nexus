@@ -9,7 +9,7 @@ ARCH ?= $(shell go env GOARCH)
 
 IMAGE_NAME := "cert-manager-webhook-nexus"
 # IMAGE_TAG := "latest"
-IMAGE_TAG := "latest"
+IMAGE_TAG := "v0.1.1"
 
 OUT := $(shell pwd)/_out
 
