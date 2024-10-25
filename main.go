@@ -84,7 +84,7 @@ func (c *nexusDnsProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) (err err
 		return
 	}
 
-	fmt.Printf("Cleaning up record for %s (%s)", ch.ResolvedFQDN, domainName)
+	fmt.Printf("Cleaning up record for %s (%s)\n", ch.ResolvedFQDN, domainName)
 
 	err = challenge.DeleteChallengeRecord(nc, c.challengeId)
 	return
