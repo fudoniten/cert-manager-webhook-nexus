@@ -14,11 +14,11 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
-        helpers = nix-helpers.packages."${system}";
+        helpers = nix-helpers.legacyPackages."${system}";
 
         webhook = pkgs.buildGoModule {
           pname = "cert-manager-webhook-nexus";
-          version = "0.1.3";
+          version = "0.1.8";
           src = ./.;
           deleteVendor = true;
           doCheck = false;
