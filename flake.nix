@@ -23,7 +23,7 @@
           deleteVendor = true;
           doCheck = false;
           # Run `nix build` once; it will fail with the correct hash to use here.
-          vendorHash = "sha256-AfTBQtSLrzD+p9gETzeD/5azFdRtlDk9l5YpJLP6k/M=";
+          vendorHash = "sha256-ppoW36AIAfrsK8zFa9EaTDb+OIvjS8l4T9oAWQBPrxc=";
           ldflags = [ "-w" "-extldflags '-static'" ];
           subPackages = [ "." ];
         };
