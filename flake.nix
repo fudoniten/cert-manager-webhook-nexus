@@ -21,8 +21,7 @@
           version = "0.1.3";
           src = ./.;
           # Run `nix build` once; it will fail with the correct hash to use here.
-          vendorHash = pkgs.lib.fakeHash;
-          CGO_ENABLED = 0;
+          vendorHash = "sha256-AfTBQtSLrzD+p9gETzeD/5azFdRtlDk9l5YpJLP6k/M=";
           ldflags = [ "-w" "-extldflags '-static'" ];
           subPackages = [ "." ];
         };
