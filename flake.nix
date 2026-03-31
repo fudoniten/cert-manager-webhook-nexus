@@ -20,6 +20,7 @@
           pname = "cert-manager-webhook-nexus";
           version = "0.1.3";
           src = ./.;
+          deleteVendor = true;
           # Run `nix build` once; it will fail with the correct hash to use here.
           vendorHash = pkgs.lib.fakeHash;
           CGO_ENABLED = 0;
