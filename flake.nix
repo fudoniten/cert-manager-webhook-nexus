@@ -22,7 +22,7 @@
           src = ./.;
           doCheck = false;
           # Run `nix build` once; it will fail with the correct hash to use here.
-          vendorHash = "sha256-ppoW36AIAfrsK8zFa9EaTDb+OIvjS8l4T9oAWQBPrxc=";
+          vendorHash = "sha256-ZTGISCSmJZjBhtY3WnIj/dQGy6OAdZ3J5Kkn19CNbpk=";
           ldflags = [ "-w" "-extldflags '-static'" ];
           subPackages = [ "." ];
         };
