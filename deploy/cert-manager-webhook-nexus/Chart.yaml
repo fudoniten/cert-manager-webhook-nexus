@@ -1,4 +1,4 @@
 apiVersion: v1
 description: Cert-Manager webhook for Nexus API
 name: cert-manager-webhook-nexus
-version: 0.1.8
+version: 1.0.0

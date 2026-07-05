@@ -2,36 +2,28 @@
 # Cert Manager Nexus Webhook
 #
 # @file
-# @version 0.1
+# @version 1.0.0
 
 OS ?= $(shell go env GOOS)
 ARCH ?= $(shell go env GOARCH)
 
 IMAGE_NAME := "cert-manager-webhook-nexus"
-# IMAGE_TAG := "latest"
-IMAGE_TAG := "v0.1.3"
+IMAGE_TAG := "v1.0.0"
 
 OUT := $(shell pwd)/_out
 
-KUBEBUILDER_VERSION=4.2.0
+# Run unit tests. The cert-manager test/acme conformance suite requires
+# envtest (kube-apiserver/etcd binaries downloaded at test time) plus a live
+# DNS server, so it is opt-in. Use `make test-conformance` to run it; you must
+# have KUBEBUILDER_ASSETS set (the envtest binaries).
+test:
+	go test -v -short ./...
 
-$(shell mkdir -p "$(OUT)")
-
-test: _test/kubebuilder
-	go test -v .
-
-_test/kubebuilder:
-	curl -fsSL https://github.com/kubernetes-sigs/kubebuilder/releases/download/v$(KUBEBUILDER_VERSION)/kubebuilder_$(OS)_$(ARCH) -o kubebuilder-tools.tar.gz
-	mkdir -p _test/kubebuilder
-	tar -xvf kubebuilder-tools.tar.gz
-	mv kubebuilder_$(KUBEBUILDER_VERSION)_$(OS)_$(ARCH)/bin _test/kubebuilder/
-	rm kubebuilder-tools.tar.gz
-	rm -R kubebuilder_$(KUBEBUILDER_VERSION)_$(OS)_$(ARCH)
-
-clean: clean-kubebuilder
-
-clean-kubebuilder:
-	rm -Rf _test/kubebuilder
+# Run the full ACME conformance suite. Requires envtest binaries at
+# KUBEBUILDER_ASSETS and a DNS server reachable at TEST_DNS_SERVER.
+test-conformance:
+	TEST_DNS_SERVER?=127.0.0.1:59351 KUBEBUILDER_ASSETS?=$$(setup-envtest use 1.32.x -p path) \
+	  go test -v -run TestRunsSuite ./...
 
 build:
 	docker build -t "$(IMAGE_NAME):$(IMAGE_TAG)" .

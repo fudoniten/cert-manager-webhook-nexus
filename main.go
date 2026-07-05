@@ -14,14 +14,13 @@ import (
 	"github.com/google/uuid"
 
 	corev1 "k8s.io/api/core/v1"
-	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	"github.com/jetstack/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
-	"github.com/jetstack/cert-manager/pkg/acme/webhook/cmd"
-	"github.com/jetstack/cert-manager/pkg/issuer/acme/dns/util"
+	"github.com/cert-manager/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
+	"github.com/cert-manager/cert-manager/pkg/acme/webhook/cmd"
 
 	"github.com/fudoniten/nexus-go/nexus"
 	"github.com/fudoniten/nexus-go/nexus/challenge"
@@ -94,7 +93,7 @@ func (c *nexusDnsProviderSolver) Present(ch *v1alpha1.ChallengeRequest) (err err
 }
 
 func (c *nexusDnsProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) (err error) {
-	domainName := extractDomainName(ch.ResolvedZone)
+	domainName := extractRecordName(ch.ResolvedFQDN, ch.ResolvedZone)
 
 	nc, err := c.nexusApiClient(ch)
 	if err != nil {
@@ -118,7 +117,7 @@ func (c *nexusDnsProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) (err err
 	return
 }
 
-func loadConfig(cfgJSON *extapi.JSON) (cfg nexusDnsProviderConfig, err error) {
+func loadConfig(cfgJSON *apiextv1.JSON) (cfg nexusDnsProviderConfig, err error) {
 	cfg = nexusDnsProviderConfig{}
 	if cfgJSON == nil {
 		return
@@ -132,7 +131,6 @@ func loadConfig(cfgJSON *extapi.JSON) (cfg nexusDnsProviderConfig, err error) {
 }
 
 func (c *nexusDnsProviderSolver) nexusApiClient(ch *v1alpha1.ChallengeRequest) (client *nexus.NexusClient, err error) {
-	domainName := extractDomainName(ch.ResolvedZone)
 	cfg, err := loadConfig(ch.Config)
 	if err != nil {
 		return
@@ -149,6 +147,8 @@ func (c *nexusDnsProviderSolver) nexusApiClient(ch *v1alpha1.ChallengeRequest) (
 		err = fmt.Errorf("failure to decode base64 secret: %v", err)
 		return
 	}
+	// ResolvedZone is the apex zone — no need to look it up.
+	domainName := strings.TrimSuffix(ch.ResolvedZone, ".")
 	client, err = nexus.New(domainName, cfg.Service, key)
 	if err != nil {
 		return
@@ -170,19 +170,12 @@ func (c *nexusDnsProviderSolver) validate(cfg *nexusDnsProviderConfig, allowAmbi
 }
 
 func extractRecordName(fqdn, domain string) string {
-	name := util.UnFqdn(fqdn)
-	if idx := strings.Index(name, "."+util.UnFqdn(domain)); idx != -1 {
+	name := strings.TrimSuffix(fqdn, ".")
+	zone := strings.TrimSuffix(domain, ".")
+	if idx := strings.Index(name, "."+zone); idx != -1 {
 		return name[:idx]
 	}
 	return name
-}
-
-// extractDomainName returns the registered domain for a challenge. cert-manager
-// already resolves the authoritative zone (via SOA recursion) and passes it as
-// ChallengeRequest.ResolvedZone, so we can use it directly instead of issuing
-// our own recursive DNS queries from the webhook pod.
-func extractDomainName(zone string) string {
-	return util.UnFqdn(zone)
 }
 
 func (c *nexusDnsProviderSolver) secret(ref corev1.SecretKeySelector, namespace string) (key string, err error) {
