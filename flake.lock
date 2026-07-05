@@ -175,11 +175,11 @@
         "utils": "utils_2"
       },
       "locked": {
-        "lastModified": 1773158705,
-        "narHash": "sha256-bwTmXN0rOd+RHc82xOXlcFB9S98YpT5MxfQv86tmyuk=",
+        "lastModified": 1775612747,
+        "narHash": "sha256-JIZtIumcQ+6lUANwdf3IDIgmifD0DA7Wu4A0kcEVW1w=",
         "owner": "fudoniten",
         "repo": "fudo-nix-helpers",
-        "rev": "f7248f1ea4f1984d94f54053e66c2d421b7ce9e9",
+        "rev": "a18e082c30d92fc573363f0e64aec0374adf085d",
         "type": "github"
       },
       "original": {
@@ -250,16 +250,16 @@
     },
     "nixpkgs_3": {
       "locked": {
-        "lastModified": 1774709303,
-        "narHash": "sha256-D3Q07BbIA2KnTcSXIqqu9P586uWxN74zNoCH3h2ESHg=",
+        "lastModified": 1783148766,
+        "narHash": "sha256-uslt2pqShTIXDdAHRHv2QkYLsVdY8Oqwz0EA48/RSM8=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "8110df5ad7abf5d4c0f6fb0f8f978390e77f9685",
+        "rev": "a50de1b7d8a586adc18d2395c19de7d6058e6030",
         "type": "github"
       },
       "original": {
         "owner": "NixOS",
-        "ref": "nixos-unstable",
+        "ref": "nixos-26.05",
         "repo": "nixpkgs",
         "type": "github"
       }
