@@ -99,8 +99,6 @@ rules:
       - ""
     resources:
       - "secrets"
-    resourceNames:
-      - "namedotcom-credentials"
     verbs:
       - "get"
       - "watch"

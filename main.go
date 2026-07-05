@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 
@@ -36,8 +38,19 @@ func main() {
 }
 
 type nexusDnsProviderSolver struct {
-	client      *kubernetes.Clientset
-	challengeId uuid.UUID
+	client *kubernetes.Clientset
+
+	// A single solver instance serves every challenge concurrently, so the
+	// per-challenge record IDs returned by Present must be tracked in a map
+	// keyed by challenge identity rather than a single shared field.
+	mu           sync.Mutex
+	challengeIds map[string]uuid.UUID
+}
+
+// challengeKey uniquely identifies a challenge so that Present and CleanUp for
+// the same ChallengeRequest agree on which record ID to use.
+func challengeKey(ch *v1alpha1.ChallengeRequest) string {
+	return ch.ResolvedFQDN + "|" + ch.Key
 }
 
 type nexusDnsProviderConfig struct {
@@ -52,6 +65,7 @@ func (c *nexusDnsProviderSolver) Initialize(kubeClientConfig *rest.Config, stopC
 	}
 
 	c.client = cl
+	c.challengeIds = make(map[string]uuid.UUID)
 
 	return nil
 }
@@ -66,13 +80,16 @@ func (c *nexusDnsProviderSolver) Present(ch *v1alpha1.ChallengeRequest) (err err
 		return
 	}
 
-	fmt.Printf("Presenting record for %s (%s)\n", ch.ResolvedFQDN, recordName)
+	log.Printf("Presenting record for %s (%s)\n", ch.ResolvedFQDN, recordName)
 
 	challengeId, err := challenge.CreateChallengeRecord(nc, recordName, ch.Key)
 	if err != nil {
 		return err
 	}
-	c.challengeId = challengeId
+
+	c.mu.Lock()
+	c.challengeIds[challengeKey(ch)] = challengeId
+	c.mu.Unlock()
 	return
 }
 
@@ -84,9 +101,20 @@ func (c *nexusDnsProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) (err err
 		return
 	}
 
-	fmt.Printf("Cleaning up record for %s (%s)\n", ch.ResolvedFQDN, domainName)
+	c.mu.Lock()
+	challengeId, ok := c.challengeIds[challengeKey(ch)]
+	delete(c.challengeIds, challengeKey(ch))
+	c.mu.Unlock()
+	if !ok {
+		// No record was presented for this challenge (or it was already
+		// cleaned up), so there is nothing to delete.
+		log.Printf("No challenge record to clean up for %s (%s)\n", ch.ResolvedFQDN, domainName)
+		return nil
+	}
 
-	err = challenge.DeleteChallengeRecord(nc, c.challengeId)
+	log.Printf("Cleaning up record for %s (%s)\n", ch.ResolvedFQDN, domainName)
+
+	err = challenge.DeleteChallengeRecord(nc, challengeId)
 	return
 }
 
@@ -97,7 +125,7 @@ func loadConfig(cfgJSON *extapi.JSON) (cfg nexusDnsProviderConfig, err error) {
 	}
 	err = json.Unmarshal(cfgJSON.Raw, &cfg)
 	if err != nil {
-		err = errors.New(fmt.Sprintf("error decoding solver config: %v", err))
+		err = fmt.Errorf("error decoding solver config: %v", err)
 		return
 	}
 	return
@@ -109,13 +137,16 @@ func (c *nexusDnsProviderSolver) nexusApiClient(ch *v1alpha1.ChallengeRequest) (
 	if err != nil {
 		return
 	}
+	if err = c.validate(&cfg, ch.AllowAmbientCredentials); err != nil {
+		return
+	}
 	keyStr, err := c.secret(cfg.ApiKeySecretRef, ch.ResourceNamespace)
 	if err != nil {
 		return
 	}
 	key, err := base64.StdEncoding.DecodeString(keyStr)
 	if err != nil {
-		err = errors.New(fmt.Sprintf("failure to decode base64 secret: %v", err))
+		err = fmt.Errorf("failure to decode base64 secret: %v", err)
 		return
 	}
 	client, err = nexus.New(domainName, cfg.Service, key)
@@ -146,13 +177,12 @@ func extractRecordName(fqdn, domain string) string {
 	return name
 }
 
+// extractDomainName returns the registered domain for a challenge. cert-manager
+// already resolves the authoritative zone (via SOA recursion) and passes it as
+// ChallengeRequest.ResolvedZone, so we can use it directly instead of issuing
+// our own recursive DNS queries from the webhook pod.
 func extractDomainName(zone string) string {
-	authZone, err := util.FindZoneByFqdn(zone, util.RecursiveNameservers)
-	if err != nil {
-		fmt.Printf("could not get zone by fqdn %v", err)
-		return zone
-	}
-	return util.UnFqdn(authZone)
+	return util.UnFqdn(zone)
 }
 
 func (c *nexusDnsProviderSolver) secret(ref corev1.SecretKeySelector, namespace string) (key string, err error) {

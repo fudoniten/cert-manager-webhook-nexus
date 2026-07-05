@@ -1,0 +1,7 @@
+{
+  "service": "example",
+  "apikeysecret": {
+    "name": "nexus-credentials",
+    "key": "api-key"
+  }
+}

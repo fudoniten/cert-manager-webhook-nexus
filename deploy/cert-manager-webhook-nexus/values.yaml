@@ -1,5 +1,7 @@
 groupName: nexus.fudo.org
 
+replicaCount: 1
+
 certManager:
   namespace: cert-manager
   serviceAccountName: cert-manager
