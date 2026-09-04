@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook"
@@ -64,5 +65,58 @@ func TestLoadConfigNil(t *testing.T) {
 	}
 	if cfg.Service != "" || cfg.ApiKeySecretRef.Name != "" {
 		t.Errorf("expected zero-value config, got %+v", cfg)
+	}
+}
+
+// TestLoadConfigPrivateKey verifies the Ed25519 private-key secret ref is
+// unmarshalled from the solver config.
+func TestLoadConfigPrivateKey(t *testing.T) {
+	cfg, err := loadConfig(&apiextv1.JSON{Raw: []byte(`{"service":"nexus.example.com","privatekeysecret":{"name":"nexus-creds","key":"private-key"}}`)})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.PrivateKeySecretRef.Name != "nexus-creds" {
+		t.Errorf("PrivateKeySecretRef.Name = %q; want nexus-creds", cfg.PrivateKeySecretRef.Name)
+	}
+	if cfg.PrivateKeySecretRef.Key != "private-key" {
+		t.Errorf("PrivateKeySecretRef.Key = %q; want private-key", cfg.PrivateKeySecretRef.Key)
+	}
+	if cfg.ApiKeySecretRef.Name != "" {
+		t.Errorf("ApiKeySecretRef.Name = %q; want empty", cfg.ApiKeySecretRef.Name)
+	}
+}
+
+// TestValidate covers which key combinations the solver accepts. Exactly one
+// kind of key must be configured: an HMAC secret for the legacy /api/v2, or an
+// Ed25519 private key for /api/v3.
+func TestValidate(t *testing.T) {
+	apiKey := corev1.SecretKeySelector{
+		LocalObjectReference: corev1.LocalObjectReference{Name: "creds"},
+		Key:                  "api-key",
+	}
+	privateKey := corev1.SecretKeySelector{
+		LocalObjectReference: corev1.LocalObjectReference{Name: "creds"},
+		Key:                  "private-key",
+	}
+
+	tests := []struct {
+		name    string
+		cfg     nexusDnsProviderConfig
+		wantErr bool
+	}{
+		{"hmac only", nexusDnsProviderConfig{Service: "s", ApiKeySecretRef: apiKey}, false},
+		{"private key only", nexusDnsProviderConfig{Service: "s", PrivateKeySecretRef: privateKey}, false},
+		{"both keys", nexusDnsProviderConfig{Service: "s", ApiKeySecretRef: apiKey, PrivateKeySecretRef: privateKey}, true},
+		{"no key", nexusDnsProviderConfig{Service: "s"}, true},
+		{"no service", nexusDnsProviderConfig{ApiKeySecretRef: apiKey}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			solver := &nexusDnsProviderSolver{}
+			err := solver.validate(&tt.cfg, false)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validate() error = %v; wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }

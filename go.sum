@@ -39,6 +39,8 @@ github.com/fsnotify/fsnotify v1.9.0 h1:2Ml+OJNzbYCTzsxtv8vKSFD9PbJjmhYF14k/jKC7S
 github.com/fsnotify/fsnotify v1.9.0/go.mod h1:8jBTzvmWwFyi3Pb8djgCCO5IBqzKJ/Jwo8TRcHyHii0=
 github.com/fudoniten/nexus-go v0.1.8 h1:xDNCTl1wb/2MDSmDihoOQc8yBpkj0aPsE7z8fx2e6nQ=
 github.com/fudoniten/nexus-go v0.1.8/go.mod h1:VWOpYbA9Y0ydrA3K8TRO6O9YhHrP7uUUa6xsAFz57EY=
+github.com/fudoniten/nexus-go v0.1.9-0.20260904164407-134fe2471e7a h1:mp3eRBE3wLVNeT81CSFllvbWZwRvRzQ+sCxpaaHCuQE=
+github.com/fudoniten/nexus-go v0.1.9-0.20260904164407-134fe2471e7a/go.mod h1:VWOpYbA9Y0ydrA3K8TRO6O9YhHrP7uUUa6xsAFz57EY=
 github.com/fxamacker/cbor/v2 v2.9.0 h1:NpKPmjDBgUfBms6tr6JZkTHtfFGcMKsw3eGcmD/sapM=
 github.com/fxamacker/cbor/v2 v2.9.0/go.mod h1:vM4b+DJCtHn+zz7h3FFp/hDAI9WNWCsZj23V5ytsSxQ=
 github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=

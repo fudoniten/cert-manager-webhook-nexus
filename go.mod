@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/cert-manager/cert-manager v1.20.3
-	github.com/fudoniten/nexus-go v0.1.8
+	github.com/fudoniten/nexus-go v0.1.9-0.20260904164407-134fe2471e7a
 	github.com/google/uuid v1.6.0
 	k8s.io/api v0.35.2
 	k8s.io/apiextensions-apiserver v0.35.2

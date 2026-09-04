@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -53,8 +52,20 @@ func challengeKey(ch *v1alpha1.ChallengeRequest) string {
 }
 
 type nexusDnsProviderConfig struct {
-	Service         string                   `json:"service"`
+	Service string `json:"service"`
+
+	// ApiKeySecretRef names a secret holding the shared HMAC key this
+	// service authenticates with against the legacy /api/v2.
 	ApiKeySecretRef corev1.SecretKeySelector `json:"apikeysecret"`
+
+	// PrivateKeySecretRef names a secret holding this service's Ed25519
+	// private key, as written by nexus-generate-key --keypair, for the
+	// public-key /api/v3. Only the client holds a private key; the matching
+	// public key sits on the Nexus server in plaintext, so migrating to one
+	// removes the shared secret the server previously had to keep.
+	//
+	// Exactly one of ApiKeySecretRef and PrivateKeySecretRef is set.
+	PrivateKeySecretRef corev1.SecretKeySelector `json:"privatekeysecret"`
 }
 
 func (c *nexusDnsProviderSolver) Initialize(kubeClientConfig *rest.Config, stopCh <-chan struct{}) error {
@@ -138,22 +149,46 @@ func (c *nexusDnsProviderSolver) nexusApiClient(ch *v1alpha1.ChallengeRequest) (
 	if err = c.validate(&cfg, ch.AllowAmbientCredentials); err != nil {
 		return
 	}
-	keyStr, err := c.secret(cfg.ApiKeySecretRef, ch.ResourceNamespace)
+	signer, err := c.signer(&cfg, ch.ResourceNamespace)
 	if err != nil {
-		return
-	}
-	key, err := base64.StdEncoding.DecodeString(keyStr)
-	if err != nil {
-		err = fmt.Errorf("failure to decode base64 secret: %v", err)
 		return
 	}
 	// ResolvedZone is the apex zone — no need to look it up.
 	domainName := strings.TrimSuffix(ch.ResolvedZone, ".")
-	client, err = nexus.New(domainName, cfg.Service, key)
+	client, err = nexus.NewWithSigner(domainName, cfg.Service, signer)
 	if err != nil {
 		return
 	}
 	return
+}
+
+// signer loads the configured key and builds a signer for it. Which config
+// field names the secret decides which kind of key is accepted, and so which
+// API version requests go to; pointing a field at the wrong kind of key fails
+// here, naming the algorithm found, rather than as an unexplained 401 from the
+// Nexus server.
+func (c *nexusDnsProviderSolver) signer(cfg *nexusDnsProviderConfig, namespace string) (nexus.Signer, error) {
+	if cfg.PrivateKeySecretRef.Name != "" {
+		keyStr, err := c.secret(cfg.PrivateKeySecretRef, namespace)
+		if err != nil {
+			return nil, err
+		}
+		signer, err := nexus.ParseEd25519Key(keyStr)
+		if err != nil {
+			return nil, fmt.Errorf("failure to load private key from privatekeysecret: %v", err)
+		}
+		return signer, nil
+	}
+
+	keyStr, err := c.secret(cfg.ApiKeySecretRef, namespace)
+	if err != nil {
+		return nil, err
+	}
+	signer, err := nexus.ParseHMACKey(keyStr)
+	if err != nil {
+		return nil, fmt.Errorf("failure to load key from apikeysecret: %v", err)
+	}
+	return signer, nil
 }
 
 func (c *nexusDnsProviderSolver) validate(cfg *nexusDnsProviderConfig, allowAmbientCredentials bool) error {
@@ -163,8 +198,13 @@ func (c *nexusDnsProviderSolver) validate(cfg *nexusDnsProviderConfig, allowAmbi
 	if cfg.Service == "" {
 		return errors.New("No service name provided in config")
 	}
-	if cfg.ApiKeySecretRef.Name == "" {
-		return errors.New("No nexus service key provided in config")
+	hasApiKey := cfg.ApiKeySecretRef.Name != ""
+	hasPrivateKey := cfg.PrivateKeySecretRef.Name != ""
+	if hasApiKey && hasPrivateKey {
+		return errors.New("Both apikeysecret and privatekeysecret provided in config; set only one")
+	}
+	if !hasApiKey && !hasPrivateKey {
+		return errors.New("No nexus service key provided in config: set privatekeysecret (Ed25519, /api/v3) or apikeysecret (legacy HMAC, /api/v2)")
 	}
 	return nil
 }
@@ -190,5 +230,12 @@ func (c *nexusDnsProviderSolver) secret(ref corev1.SecretKeySelector, namespace 
 	}
 
 	key = string(keyValue.Data[ref.Key])
+	if key == "" {
+		// An absent entry reads back as the empty string, which would
+		// otherwise become an empty signing key and fail much later, as an
+		// unexplained 401 from the Nexus server.
+		err = fmt.Errorf("secret %v has no value for key %v", ref.Name, ref.Key)
+		return
+	}
 	return
 }
