@@ -230,5 +230,12 @@ func (c *nexusDnsProviderSolver) secret(ref corev1.SecretKeySelector, namespace 
 	}
 
 	key = string(keyValue.Data[ref.Key])
+	if key == "" {
+		// An absent entry reads back as the empty string, which would
+		// otherwise become an empty signing key and fail much later, as an
+		// unexplained 401 from the Nexus server.
+		err = fmt.Errorf("secret %v has no value for key %v", ref.Name, ref.Key)
+		return
+	}
 	return
 }
